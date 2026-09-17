@@ -1,0 +1,76 @@
+# 特安 · 特种设备检验与维保全生命周期监管平台
+# 一键拉起：docker compose up -d --build
+# 前端 http://localhost:8107（Nginx 反代后端）  后端 http://localhost:7107
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: tean-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-TeanRoot@2026}
+      MYSQL_DATABASE: tean
+      TZ: Asia/Shanghai
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./deploy/mysql/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-p$$MYSQL_ROOT_PASSWORD"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+    networks: [tean]
+
+  redis:
+    image: redis:7-alpine
+    container_name: tean-redis
+    command: redis-server --appendonly no
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks: [tean]
+
+  backend:
+    build: ./backend
+    container_name: tean-backend
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/tean?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD:-TeanRoot@2026}
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: "6379"
+      JWT_SECRET: ${JWT_SECRET:-tean-dev-secret-please-override-in-prod-0123456789abcdef}
+      TZ: Asia/Shanghai
+    ports:
+      - "7107:7107"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/localhost/7107' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 40s
+    networks: [tean]
+
+  frontend:
+    build: ./frontend
+    container_name: tean-frontend
+    ports:
+      - "8107:80"
+    depends_on:
+      backend:
+        condition: service_started
+    networks: [tean]
+
+volumes:
+  mysql-data:
+
+networks:
+  tean:
+    driver: bridge

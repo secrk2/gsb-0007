@@ -1,0 +1,40 @@
+server:
+  port: 7107
+
+spring:
+  application:
+    name: tean-backend
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3306/tean?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true}
+    username: ${SPRING_DATASOURCE_USERNAME:root}
+    password: ${SPRING_DATASOURCE_PASSWORD:TeanRoot@2026}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    hibernate:
+      ddl-auto: none   # 表结构由 deploy/mysql/init/01-schema.sql 统一管理
+    open-in-view: false
+  data:
+    redis:
+      host: ${SPRING_DATA_REDIS_HOST:localhost}
+      port: ${SPRING_DATA_REDIS_PORT:6379}
+      timeout: 3s
+  jackson:
+    time-zone: Asia/Shanghai
+    date-format: yyyy-MM-dd HH:mm:ss
+
+tean:
+  jwt-secret: ${JWT_SECRET:tean-dev-secret-please-override-in-prod-0123456789abcdef}
+  jwt-ttl-hours: ${JWT_TTL_HOURS:12}
+  # 检验临期阈值（天）
+  due-soon-days: 30
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+
+logging:
+  level:
+    root: info
+    com.tean: info

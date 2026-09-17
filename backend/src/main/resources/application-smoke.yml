@@ -1,0 +1,41 @@
+# 本地冒烟测试配置：H2 内存库（MySQL 模式）+ 自动建表
+# 用法：mvn spring-boot:run -Dspring-boot.run.profiles=smoke
+server:
+  port: 7107
+
+spring:
+  application:
+    name: tean-backend
+  datasource:
+    url: jdbc:h2:mem:tean;MODE=MySQL;DATABASE_TO_LOWER=TRUE;NON_KEYWORDS=USER
+    username: sa
+    password: ""
+    driver-class-name: org.h2.Driver
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    open-in-view: false
+  data:
+    redis:
+      host: 127.0.0.1
+      port: 6399
+      timeout: 1s
+  jackson:
+    time-zone: Asia/Shanghai
+    date-format: yyyy-MM-dd HH:mm:ss
+
+tean:
+  jwt-secret: tean-dev-secret-please-override-in-prod-0123456789abcdef
+  jwt-ttl-hours: 12
+  due-soon-days: 30
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+
+logging:
+  level:
+    root: warn
+    com.tean: info

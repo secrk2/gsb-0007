@@ -12,3 +12,6 @@ coverage/
 *.log
 *.tsbuildinfo
 .DS_Store
+.idea/
+.vscode/
+*.iml
