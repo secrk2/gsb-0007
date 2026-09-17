@@ -1,0 +1,73 @@
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: tean-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root_secret
+      MYSQL_DATABASE: tean
+      MYSQL_USER: tean
+      MYSQL_PASSWORD: tean_secret
+      TZ: Asia/Shanghai
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-utean", "-ptean_secret"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks: [tean]
+
+  redis:
+    image: redis:7-alpine
+    container_name: tean-redis
+    command: redis-server --appendonly yes
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks: [tean]
+
+  backend:
+    build: ./backend
+    container_name: tean-backend
+    environment:
+      DB_URL: jdbc:mysql://mysql:3306/tean?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&createDatabaseIfNotExist=true
+      DB_USER: tean
+      DB_PASS: tean_secret
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+    ports:
+      - "7107:8080"   # 后端直连端口
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "(echo > /dev/tcp/localhost/8080) 2>/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    networks: [tean]
+
+  frontend:
+    build: ./frontend
+    container_name: tean-frontend
+    ports:
+      - "8107:80"     # 前端入口（Nginx 反代后端）
+    depends_on:
+      backend:
+        condition: service_started
+    networks: [tean]
+
+volumes:
+  mysql-data:
+  redis-data:
+
+networks:
+  tean:
+    driver: bridge
